@@ -34,6 +34,23 @@ app.get("/api/persons", (req, res) => {
   res.json(contacts);
 });
 
+app.get('/info', (req, res) => {
+  const currentDate = new Date().toLocaleString();
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;  
+  res.send(
+    `<>
+      <div>
+        <p>Phonebook has info for ${contacts.length} people</p>
+      </div>
+      <div>
+        <p>
+          ${currentDate} (${timeZone})
+        </p>
+      </div>
+    </>`
+  );      
+})
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
