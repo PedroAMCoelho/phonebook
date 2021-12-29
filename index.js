@@ -76,16 +76,24 @@ const generateId = () => {
   return maxId + 1
 }
 
+const message = (res, message) =>
+  res.status(400).json({
+    error: message,
+  }); 
+
 app.post('/api/persons', (req, res) => {
 
   let body = req.body;
-  console.log(body);
 
-  if (!body) {
-    return res.status(400).json({ 
-      error: 'content missing' 
-    })
-  }
+  if (!body || Object.keys(body).length === 0) return message(res, "content missing");  
+
+  if (!body.name) return message(res, "name missing");
+
+  if (!body.number) return message(res, "number missing");
+
+  let exists = contacts.some(x => x.name === body.name);
+
+  if (exists) return message(res, "name must be unique");
 
   let person = {
     id: generateId(),
