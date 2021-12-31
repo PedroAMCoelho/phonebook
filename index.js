@@ -1,6 +1,8 @@
+require("dotenv").config();
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
+const Person = require('./models/person')
 const app = express();
 
 app.use(express.json());
@@ -11,70 +13,45 @@ morgan.token("body", (req) => `- ${JSON.stringify(req.body)}`);
 
 app.use(morgan(":method :url :status :res[content-length] - :response-time ms :body"));
 
-let contacts = [
-    { 
-      "id": 1,
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-];
-
 app.get("/", (req, res) => {
   res.send("<h1>Hello World!</h1>");
 });
 
-app.get("/api/persons", (req, res) => {
-  res.json(contacts);
-});
+app.get('/api/persons', (req, res) => {
+  Person.find({}).then(persons => {
+        res.json(persons)
+      })
+})
 
 app.get('/info', (req, res) => {
   const currentDate = new Date().toLocaleString();
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;  
-  res.send(
-    `<>
-      <div>
-        <p>Phonebook has info for ${contacts.length} people</p>
-      </div>
-      <div>
-        <p>
-          ${currentDate} (${timeZone})
-        </p>
-      </div>
-    </>`
-  );      
+  Person.find({}).then(persons => {
+    res.send(
+        `
+        <div>
+            <p>Phonebook has info for ${persons.length} people</p>
+        </div>
+        <div>
+            <p>${currentDate} (${timeZone})</p>
+        </div>`
+    )
+    });      
 })
 
 app.get('/api/persons/:id', (req, res) => {
-  let id = Number(req.params.id);
-  let contact = contacts.find(c => c.id === id);
-
-  if (contact) res.json(contact);
-  else res.status(404).end();  
+  Person.findById(req.params.id)
+  .then(person => {
+      if (person) res.json(person);
+      else res.status(404).end();
+  })
 })
 
-app.delete('/api/persons/:id', (req, res) => {  
-  let id = Number(req.params.id);
-  let exists = contacts.some(x => x.id === id);
-  if (exists) {
-    contacts = contacts.filter(x => x.id !== id);
-    res.status(204).end();
-  }
-  else res.status(404).end();
+app.delete('/api/persons/:id', (req, res) => {
+  Person.findByIdAndRemove(req.params.id)
+  .then(() => {
+    res.status(204).end()
+  })
 })
 
 const generateId = () => {
@@ -99,19 +76,28 @@ app.post('/api/persons', (req, res) => {
 
   if (!body.number) return message(res, "number missing");
 
-  let exists = contacts.some(x => x.name === body.name);
+  let exists = false;
+
+  // Person.find({})
+  //   .then(person => {
+  //     console.log(person)
+  //     console.log(person === body.name)
+  //     if (person === body.name) exists = true;
+  //   })
 
   if (exists) return message(res, "name must be unique");
 
-  let person = {
-    id: generateId(),
+  let person = new Person ({
+    //id: generateId(),
     name: body.name,
     number: body.number
-  };
+  });
 
-  contacts = contacts.concat(person);
-
-  res.json(person);
+  person.save()
+    .then(savedPerson => {
+        console.log(`added ${savedPerson.name} number ${savedPerson.number} to phonebook`);
+        res.json(savedPerson);
+        });
 })
 
 console.log(process.env.PORT);
